@@ -1,7 +1,8 @@
 package todolistmanager.huji.ac.il.todolist;
+import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.app.ActionBarActivity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -10,20 +11,17 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class TodoListManagerActivity extends ActionBarActivity {
 
-    EditText itemToAdd;
     ListView items;
-    List<String> listData;
-    ArrayAdapter<String> adapter;
-    Context cxt;
+    List<taskLine> listData;
+    MyAdapter adapter;
     int indexToDelete;
     int i;
 
@@ -31,38 +29,49 @@ public class TodoListManagerActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_todo_list_manager);
-
-        cxt = this;
-        itemToAdd = (EditText) findViewById(R.id.edtNewItem);
         items = (ListView) findViewById(R.id.lstTodoItems);
-        listData = new ArrayList<String>();
-        i = 0;
+        listData = new ArrayList<taskLine>();
 
-        //on item long click - deletion
+        //on item long click
         items.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                indexToDelete = position;
+            public boolean onItemLongClick(final AdapterView<?> parent, View view, final int position, long id) {
                 //build dialog
-                AlertDialog.Builder builder = new AlertDialog.Builder(cxt);
-                builder.setMessage(listData.get(position))
-                        .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                //update data and list view
-                                listData.remove(indexToDelete);
-                                adapter = new ArrayAdapter<String>(cxt, R.layout.itemlayout, R.id.line, listData);
-                                items.setAdapter(adapter);
-                                dialog.cancel();
-                            }
-                        })
-                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                            @Override
-                            //no action
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.cancel();
-                            }
-                        });
+                AlertDialog.Builder builder = new AlertDialog.Builder(TodoListManagerActivity.this);
+                builder.setMessage(listData.get(position).title);
+
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    //no action
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                builder.setPositiveButton("Delete Item", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //update data and list view
+                        listData.remove(position);
+                        adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
+                        items.setAdapter(adapter);
+                        dialog.cancel();
+                    }
+                });
+                //check if title starts with "Call " - if it does add another button
+                if (listData.get(position).title.startsWith("Call ")) {
+                    builder.setNeutralButton("Call", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            //call
+                            Intent dial = new Intent(Intent.ACTION_DIAL,
+                                    Uri.parse("tel:"+listData.get(position).title.substring(5)));
+                                    startActivity(dial);
+                            dialog.cancel();
+                        }
+                    });
+                }
+
                 AlertDialog alert = builder.create();
                 alert.show();
                 return true;
@@ -76,33 +85,57 @@ public class TodoListManagerActivity extends ActionBarActivity {
 
             }
 
-            //keep the colors ordered
+            //red is over due and blue is future task
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
                 //for all items that appear on the list view
+                Date now = new Date();
                 for (i=firstVisibleItem;i<firstVisibleItem+visibleItemCount;i++) {
-                    TextView line = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.line));
-                    //the color of the row depends on it's index
-                    if (i % 2 == 0) {
-                        line.setTextColor(Color.RED);
+                    //assign values
+                    TextView dueDate = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoDueDate));
+                    TextView title = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoTitle));
+
+                    //analyze date
+                    String[] info = dueDate.getText().toString().split("/");
+                    Date d = new Date(Integer.parseInt(info[2])-1900, Integer.parseInt(info[1])-1,
+                            Integer.parseInt(info[0]));
+
+                    //color accordingly
+                    if (now.after(d)) {
+                        dueDate.setTextColor(Color.RED);
+                        title.setTextColor(Color.RED);
                     } else {
-                        line.setTextColor(Color.BLUE);
+                        dueDate.setTextColor(Color.BLUE);
+                        title.setTextColor(Color.BLUE);
                     }
                 }
             }
         });
     }
 
+    //open new task dialog
+    public void openForm() {
+        Intent intent = new Intent(this, AddNewTodoItemActivity.class);
+        startActivityForResult(intent, 0);
+    }
+
+    //When dialog ends
+    protected void onActivityResult(int reqCode, int resCode, Intent data) {
+        switch (resCode) {
+            case RESULT_OK:
+                addItem(data.getStringExtra("title"), data.getLongExtra("dueDate",0));
+        }
+    }
+
     //add item to the list view
-    public void addItem(View view) {
+    public void addItem(String task, long date) {
         //check if valid
-        if (!itemToAdd.getText().toString().equals("")) {
+        if (!task.equals("")) {
             //insert to data
-            listData.add(itemToAdd.getText().toString());
+            listData.add(new taskLine(task, date));
             //update listView
-            adapter = new ArrayAdapter<String>(this, R.layout.itemlayout, R.id.line, listData);
+            adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
             items.setAdapter(adapter);
-            itemToAdd.setText("");
         }
     }
 
@@ -117,8 +150,8 @@ public class TodoListManagerActivity extends ActionBarActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.add) {
-            addItem(item.getActionView());
+        if (id == R.id.menuItemAdd) {
+            openForm();
             return true;
         }
         return super.onOptionsItemSelected(item);

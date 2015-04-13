@@ -9,13 +9,18 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".TodoListManagerActivity"
-            android:label="@string/app_name" >
+            android:label="To Do List" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".AddNewTodoItemActivity"
+            android:label="Add New Item"
+            android:theme="@android:style/Theme.Dialog" />
+
     </application>
 
 </manifest>

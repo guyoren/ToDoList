@@ -4,13 +4,21 @@
     android:padding="6dip" >
 
     <TextView
-        android:id="@+id/line"
-        android:layout_width="fill_parent"
+        android:id="@+id/txtTodoTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
         android:layout_alignWithParentIfMissing="true"
         android:gravity="center_vertical"
-        android:textSize="30sp" />
+        android:textSize="18sp" />
+    <TextView
+        android:id="@+id/txtTodoDueDate"
+        android:layout_toRightOf="@+id/txtTodoTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignWithParentIfMissing="true"
+        android:gravity="center_vertical"
+        android:textSize="18sp" />
 
 </RelativeLayout> 
