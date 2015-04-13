@@ -60,7 +60,7 @@ public class TodoListManagerActivity extends ActionBarActivity {
                 });
                 //check if title starts with "Call " - if it does add another button
                 if (listData.get(position).title.startsWith("Call ")) {
-                    builder.setNeutralButton("Call", new DialogInterface.OnClickListener() {
+                    builder.setNeutralButton(listData.get(position).title, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             //call
