@@ -19,6 +19,7 @@ import java.util.List;
 
 public class TodoListManagerActivity extends ActionBarActivity {
 
+    DB db;
     ListView items;
     List<taskLine> listData;
     MyAdapter adapter;
@@ -29,8 +30,15 @@ public class TodoListManagerActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_todo_list_manager);
+
+        //init DB
+        db = new DB(this, "ToDoList", null, 1);
+        db.db = db.getWritableDatabase();
+
         items = (ListView) findViewById(R.id.lstTodoItems);
         listData = new ArrayList<taskLine>();
+        //refresh listView on open
+        firstListViewUpdate();
 
         //on item long click
         items.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
@@ -51,8 +59,9 @@ public class TodoListManagerActivity extends ActionBarActivity {
                 builder.setPositiveButton("Delete Item", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        db.deleteTask(listData.get(position).title,listData.get(position).dueDate);
                         //update data and list view
-                        listData.remove(position);
+                        listData = db.getAllTasks();
                         adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
                         items.setAdapter(adapter);
                         dialog.cancel();
@@ -88,27 +97,7 @@ public class TodoListManagerActivity extends ActionBarActivity {
             //red is over due and blue is future task
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-                //for all items that appear on the list view
-                Date now = new Date();
-                for (i=firstVisibleItem;i<firstVisibleItem+visibleItemCount;i++) {
-                    //assign values
-                    TextView dueDate = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoDueDate));
-                    TextView title = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoTitle));
-
-                    //analyze date
-                    String[] info = dueDate.getText().toString().split("/");
-                    Date d = new Date(Integer.parseInt(info[2])-1900, Integer.parseInt(info[1])-1,
-                            Integer.parseInt(info[0]));
-
-                    //color accordingly
-                    if (now.after(d)) {
-                        dueDate.setTextColor(Color.RED);
-                        title.setTextColor(Color.RED);
-                    } else {
-                        dueDate.setTextColor(Color.BLUE);
-                        title.setTextColor(Color.BLUE);
-                    }
-                }
+                updateItems(firstVisibleItem, visibleItemCount);
             }
         });
     }
@@ -131,9 +120,10 @@ public class TodoListManagerActivity extends ActionBarActivity {
     public void addItem(String task, long date) {
         //check if valid
         if (!task.equals("")) {
-            //insert to data
-            listData.add(new taskLine(task, date));
+            //dave task to db
+            db.saveTask(task,date);
             //update listView
+            listData = db.getAllTasks();
             adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
             items.setAdapter(adapter);
         }
@@ -155,5 +145,45 @@ public class TodoListManagerActivity extends ActionBarActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public void updateItems(int firstVisibleItem, int visibleItemCount){
+        listData = db.getAllTasks();
+        if (listData.size()==0){
+            return;
+        }
+        adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
+
+        //for all items that appear on the list view
+        Date now = new Date();
+        for (i=firstVisibleItem;i<firstVisibleItem+visibleItemCount;i++) {
+            //assign values
+            TextView dueDate = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoDueDate));
+            TextView title = (TextView) (items.getChildAt(i-firstVisibleItem).findViewById(R.id.txtTodoTitle));
+
+            //analyze date
+            String[] info = dueDate.getText().toString().split("/");
+            Date d = new Date(Integer.parseInt(info[2])-1900, Integer.parseInt(info[1])-1,
+                    Integer.parseInt(info[0]));
+
+            //color accordingly
+            if (now.after(d)) {
+                dueDate.setTextColor(Color.RED);
+                title.setTextColor(Color.RED);
+            } else {
+                dueDate.setTextColor(Color.BLUE);
+                title.setTextColor(Color.BLUE);
+            }
+        }
+    }
+
+    //refresh primary data from db to listview
+    public void firstListViewUpdate(){
+        listData = db.getAllTasks();
+        if (listData.size()==0){
+            return;
+        }
+        adapter = new MyAdapter(getApplicationContext(), R.layout.itemlayout, listData);
+        items.setAdapter(adapter);
     }
 }
